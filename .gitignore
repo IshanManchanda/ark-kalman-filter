@@ -1,0 +1,36 @@
+# Folders to ignore
+
+# Files to ignore
+
+# File types to ignore
+*.pyc
+
+# IntelliJ project files
+.idea
+*.iml
+gen
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Pipenv
+Pipfile.lock
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
