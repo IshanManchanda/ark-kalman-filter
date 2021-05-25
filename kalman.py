@@ -35,8 +35,8 @@ class KalmanFilter:
 		# Predict next state using previous state data
 		self.predicted_state = (self.a @ self.state) + (self.b @ process)
 		self.predicted_process_cov = self.a @ self.process_cov @ self.a.T
-		# self.predicted_process_cov += 5 * np.eye(18)
-		self.predicted_process_cov *= 1.2
+		self.predicted_process_cov += 0.01 * np.eye(18)
+		# self.predicted_process_cov *= 1.2
 		# print("predstate", self.predicted_state.shape)
 		# print("predpcov", self.predicted_process_cov.shape)
 

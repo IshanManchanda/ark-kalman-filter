@@ -36,8 +36,11 @@ def plot_trajectory(data, title, index):
 	# Plot a single trajectory and save as image
 	# TODO: Change to 3D plot
 	figure = plt.figure(index)
-	plt.plot(data[:, 0], data[:, 1])
+	ax = plt.axes(projection='3d')
 	plt.title(title)
+
+	x = data[:, 0].size
+	ax.scatter3D(data[:, 0], data[:, 6], data[:, 12], c=range(x), cmap='Greens')
 
 	base_path = os.path.dirname(os.path.abspath(__file__))
 	path = os.path.join(base_path, f'out/{title}.png')
@@ -45,13 +48,18 @@ def plot_trajectory(data, title, index):
 
 
 def plot_combined(data1, data2, label1, label2, title, index):
-	# Plot 2 trajectories in a single graph and save as image
-	# TODO: Change to 3D plot
+	# Plot 2 trajectories in a single graph and save as imag
 	figure = plt.figure(index)
-	plt.plot(data1[:, 0], data1[:, 1])
-	plt.plot(data2[:, 0], data2[:, 1])
-	plt.legend([label1, label2])
+	ax = plt.axes(projection='3d')
 	plt.title(title)
+	plt.legend([label1, label2])
+
+	x = data1.shape[0]
+	ax.scatter3D(
+		data1[:, 0], data1[:, 6], data1[:, 12], c=range(x),
+		cmap='Reds', edgecolors='none', alpha=0.25
+	)
+	ax.scatter3D(data2[:, 0], data2[:, 6], data2[:, 12], c=range(x), cmap='viridis')
 
 	base_path = os.path.dirname(os.path.abspath(__file__))
 	path = os.path.join(base_path, f'out/{title}.png')
@@ -83,7 +91,7 @@ def main():
 	# and reducing the vel var wrt pos var increased performance.
 
 	# Measurement covariance matrix (or measurement error)
-	measurement_cov = pos_var * np.eye(18)
+	measurement_cov = 5 * pos_var * np.eye(18)
 
 	# State Transition Matrix
 	# Constant velocity model
@@ -140,22 +148,25 @@ def main():
 
 		# Update variables for next iteration
 		prev_pos = cur_pos
-		# prev_vel = cur_vel
-		# updated_prev_vel = updated_cur_vel
+	# prev_vel = cur_vel
+	# updated_prev_vel = updated_cur_vel
 
 	# Save position data to output file
 	save_data(updated_positions, 'positions')
-	print('dun')
 	# Plotting
 	c = itertools.count()  # Generates unique numbers for the figure indices
 	label_m = "Measured Trajectory"
 	label_f = "Updated Trajectory"
 	combined_title = "Combined Plot"
+	plot_trajectory(positions[-1000:, :], label_m + " Partial", next(c))
+	plot_trajectory(updated_positions[-1000:, :], label_f + " Partial", next(c))
+
 	plot_trajectory(positions, label_m, next(c))
 	plot_trajectory(updated_positions, label_f, next(c))
 	plot_combined(
-		positions, updated_positions, label_m, label_f, combined_title, next(c)
+		positions[-1000:, :], updated_positions[-1000:, :], label_m, label_f, combined_title, next(c)
 	)
+	print(positions.shape, updated_positions.shape)
 
 	print("Positions and trajectory plots saved to output folder.")
 
