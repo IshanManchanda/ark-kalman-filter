@@ -2,7 +2,7 @@ import numpy as np
 
 
 class KalmanFilter:
-	def __init__(self, state, process_cov, measurement_cov, a, b, h):
+	def __init__(self, state, process_cov, measurement_cov, a, b, h, q):
 		self.state = state  # Initial State
 
 		# Initial Process Covariance Matrix and Measurement Covariance Matrix
@@ -13,6 +13,7 @@ class KalmanFilter:
 		self.a = a  # State Transition Matrix
 		self.b = b  # Control Matrix
 		self.h = h  # Estimate Error Transform Matrix
+		self.q = q  # Process Noise Matrix
 
 		# print("State", state.shape, state.dtype)
 		# print("Pcov", process_cov.shape)
@@ -35,7 +36,11 @@ class KalmanFilter:
 		# Predict next state using previous state data
 		self.predicted_state = (self.a @ self.state) + (self.b @ process)
 		self.predicted_process_cov = self.a @ self.process_cov @ self.a.T
-		self.predicted_process_cov += 0.01 * np.eye(18)
+
+		# Add process noise
+		self.predicted_process_cov += self.q
+
+		# self.predicted_process_cov += 0.01 * np.eye(18)
 		# self.predicted_process_cov *= 1.2
 		# print("predstate", self.predicted_state.shape)
 		# print("predpcov", self.predicted_process_cov.shape)
