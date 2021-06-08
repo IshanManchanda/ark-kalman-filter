@@ -68,19 +68,22 @@ def plot_combined(data1, data2, label1, label2, title, index):
 
 
 def main():
-	# dt computed while exploring data by averaging time periods
-	# over the given dataset after removing outliers
+	# Time interval between measurements
 	dt = 1
 	dt2 = dt * dt
 
 	# Initial process covariance matrix
-	pos_var = 1
+	# We'll set the position variance to 1 as the absolute value doesn't matter
+	# all other values will be relative to this
+	# We're blind guessing initial velocity and acceleration (as 0)
+	# so we give them a very high initial variance value
+	initial_pos_var = 1
 	initial_vel_var = 1e-9
 	initial_acc_var = 1e-9
 	initial_cov = np.array([
-		[pos_var, 0, 0, 0, 0, 0, 0, 0, 0],
-		[0, pos_var, 0, 0, 0, 0, 0, 0, 0],
-		[0, 0, pos_var, 0, 0, 0, 0, 0, 0],
+		[initial_pos_var, 0, 0, 0, 0, 0, 0, 0, 0],
+		[0, initial_pos_var, 0, 0, 0, 0, 0, 0, 0],
+		[0, 0, initial_pos_var, 0, 0, 0, 0, 0, 0],
 		[0, 0, 0, initial_vel_var, 0, 0, 0, 0, 0],
 		[0, 0, 0, 0, initial_vel_var, 0, 0, 0, 0],
 		[0, 0, 0, 0, 0, initial_vel_var, 0, 0, 0],
@@ -89,9 +92,13 @@ def main():
 		[0, 0, 0, 0, 0, 0, 0, 0, initial_acc_var],
 	])
 
-	# Measurement covariance matrix (or measurement error)
-	# measurement_cov = 5 * pos_var * np.eye(18)
-	vel_var = 0.005
+	# Measurement covariance matrix
+	# We use the same position variance as our initial as the source of data
+	# for both is the same.
+	# Further, we're combining the values from 5 stations for the velocity
+	# so the variance is one 5th.
+	pos_var = initial_pos_var
+	vel_var = pos_var / 5
 	measurement_cov = np.array([
 		[pos_var, 0, 0, 0, 0, 0],
 		[0, pos_var, 0, 0, 0, 0],
@@ -100,14 +107,9 @@ def main():
 		[0, 0, 0, 0, vel_var, 0],
 		[0, 0, 0, 0, 0, vel_var],
 	])
-	# measurement_cov = np.array([
-	# 	[pos_var, 0, 0],
-	# 	[0, pos_var, 0],
-	# 	[0, 0, pos_var],
-	# ]) / 10
 
 	# State Transition Matrix
-	# Constant acceleration model
+	# We assume a constant acceleration model without any process information
 	a = np.array([
 		[1, 0, 0, dt, 0, 0, dt2 / 2, 0, 0],
 		[0, 1, 0, 0, dt, 0, 0, dt2 / 2, 0],
@@ -121,21 +123,11 @@ def main():
 	])
 
 	# Control Matrix
-	# Constant acceleration model
+	# As we have no information about the process, we don't perform any updates
 	b = np.zeros((9, 1))
 
 	# Estimate Error Transform Matrix
-	# h = np.array([
-	# 	[1, 0, 0, 0, 0, 0],
-	# 	[0, 1, 0, 0, 0, 0],
-	# 	[0, 0, 1, 0, 0, 0],
-	# 	[0, 0, 0, 1, 0, 0],
-	# 	[0, 0, 0, 0, 1, 0],
-	# 	[0, 0, 0, 0, 0, 1],
-	# 	[0, 0, 0, 0, 0, 0],
-	# 	[0, 0, 0, 0, 0, 0],
-	# 	[0, 0, 0, 0, 0, 0],
-	# ])
+	# We're measuring the first 6 of our 9 state variables
 	h = np.array([
 		[1, 0, 0, 0, 0, 0, 0, 0, 0],
 		[0, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -144,14 +136,12 @@ def main():
 		[0, 0, 0, 0, 1, 0, 0, 0, 0],
 		[0, 0, 0, 0, 0, 1, 0, 0, 0],
 	])
-	# h = np.array([
-	# 	[1, 0, 0, 0, 0, 0, 0, 0, 0],
-	# 	[0, 1, 0, 0, 0, 0, 0, 0, 0],
-	# 	[0, 0, 1, 0, 0, 0, 0, 0, 0],
-	# ])
 
 	# Process noise matrix
-	q = np.array([
+	# Noise introduced in each step of the process
+	# Standard matrix for constant acceleration model with dt = 1
+	noise_coeff = 1e-20
+	q = noise_coeff * np.array([
 		[1, 0, 0, 2, 0, 0, 2, 0, 0],
 		[0, 1, 0, 0, 2, 0, 0, 2, 0],
 		[0, 0, 1, 0, 0, 2, 0, 0, 2],
@@ -161,91 +151,96 @@ def main():
 		[2, 0, 0, 4, 0, 0, 4, 0, 0],
 		[0, 2, 0, 0, 4, 0, 0, 4, 0],
 		[0, 0, 2, 0, 0, 4, 0, 0, 4],
-	]) * 0.0000000001 ** 2
+	])
 
-	# Read in data
-	positions = read_data()
-	# data = read_data()
-	# drone_positions = data[:, :3]
-	# tower_positions = data[:, 3:]
+	# TODO: Read in the appropriate csv
+	# TODO: Create a folder for each csv within the output folder
+	# REVIEW: Save the positions txt to the out folder and plots in specific ones?
+	# TODO: Update the saving line to save to the right folder
+	for i in range(4):
+		# Read in data
+		positions = read_data()
+		# data = read_data()
+		# drone_positions = data[:, :3]
+		# tower_positions = data[:, 3:]
 
-	# Store previous velocity for computing acceleration
-	# prev_vel = updated_prev_vel = velocities[0]
-	# prev_pos = positions[0].reshape((6, 3))
-	prev_pos = positions[0, 3:].reshape((5, 3))
-	# print(positions[0, 3:])
-	# print(prev_pos)
-	# return
-	vel = np.array([0, 0, 0])
-	# Store updated positions for plotting
-	# updated_positions = np.zeros(positions.shape)
-	# updated_positions[0, :] = positions[0, :]
-	updated_positions = np.zeros(positions[:, :3].shape)
-	updated_positions[0] = positions[0, :3]
+		# Store previous velocity for computing acceleration
+		# prev_vel = updated_prev_vel = velocities[0]
+		# prev_pos = positions[0].reshape((6, 3))
+		prev_pos = positions[0, 3:].reshape((5, 3))
+		# print(positions[0, 3:])
+		# print(prev_pos)
+		# return
+		vel = np.array([0, 0, 0])
+		# Store updated positions for plotting
+		# updated_positions = np.zeros(positions.shape)
+		# updated_positions[0, :] = positions[0, :]
+		updated_positions = np.zeros(positions[:, :3].shape)
+		updated_positions[0] = positions[0, :3]
 
-	# Initial State Vector
-	# initial_state = np.atleast_2d(positions[0]).T
-	# initial_state = np.vstack((np.atleast_2d(positions[0, :3]).T, [[0], [0], [0]]))
-	initial_state = np.atleast_2d(np.hstack((positions[0, :3], [0] * 6))).T
+		# Initial State Vector
+		# initial_state = np.atleast_2d(positions[0]).T
+		# initial_state = np.vstack((np.atleast_2d(positions[0, :3]).T, [[0], [0], [0]]))
+		initial_state = np.atleast_2d(np.hstack((positions[0, :3], [0] * 6))).T
 
-	# Create KalmanFilter object
-	kalman = KalmanFilter(
-		initial_state, initial_cov, measurement_cov, a, b, h, q
-	)
+		# Create KalmanFilter object
+		kalman = KalmanFilter(
+			initial_state, initial_cov, measurement_cov, a, b, h, q
+		)
 
-	for i, pos in enumerate(positions[1:]):
-		cur_pos = pos[3:].reshape((5, 3))
-		vel = np.mean(cur_pos - prev_pos, axis=0) / dt
+		for i, pos in enumerate(positions[1:]):
+			cur_pos = pos[3:].reshape((5, 3))
+			vel = np.mean(cur_pos - prev_pos, axis=0) / dt
 
-		# Compute process and measurement vectors
-		# process = np.atleast_2d(vel).T
-		process = np.zeros(1)
-		measurement = np.atleast_2d(np.hstack((pos[:3], vel))).T
-		# measurement = np.atleast_2d(pos[:3]).T
+			# Compute process and measurement vectors
+			# process = np.atleast_2d(vel).T
+			process = np.zeros(1)
+			measurement = np.atleast_2d(np.hstack((pos[:3], vel))).T
+			# measurement = np.atleast_2d(pos[:3]).T
 
-		# Perform an iteration of the Filter, store updated position
-		kalman.iterate(process, measurement)
-		updated_positions[i + 1] = kalman.state[:, 0].T[:3]
+			# Perform an iteration of the Filter, store updated position
+			kalman.iterate(process, measurement)
+			updated_positions[i + 1] = kalman.state[:, 0].T[:3]
 
-		# Print updated position
-		# print(f"---Iteration {i + 1}---")
-		# print(f"Pos x: {kalman.state[0, 0]}, var: {kalman.process_cov[0, 0]}")
-		# print(f"Pos y: {kalman.state[1, 0]}, var: {kalman.process_cov[1, 1]}")
+			# Print updated position
+			# print(f"---Iteration {i + 1}---")
+			# print(f"Pos x: {kalman.state[0, 0]}, var: {kalman.process_cov[0, 0]}")
+			# print(f"Pos y: {kalman.state[1, 0]}, var: {kalman.process_cov[1, 1]}")
 
-		# Compute updated average velocity and print
-		# updated_cur_vel = kalman.state[2:, 0].T
-		# updated_avg_vel = (updated_cur_vel + updated_prev_vel) / 2
-		# print(f"Vel x: {updated_avg_vel[0]}; var: {kalman.process_cov[2, 2]}")
-		# print(f"Vel y: {updated_avg_vel[1]}; var: {kalman.process_cov[3, 3]}")
+			# Compute updated average velocity and print
+			# updated_cur_vel = kalman.state[2:, 0].T
+			# updated_avg_vel = (updated_cur_vel + updated_prev_vel) / 2
+			# print(f"Vel x: {updated_avg_vel[0]}; var: {kalman.process_cov[2, 2]}")
+			# print(f"Vel y: {updated_avg_vel[1]}; var: {kalman.process_cov[3, 3]}")
 
-		# Reshape position to have x, y, and z cols
-		# cur_pos = pos.reshape((6, 3))
-		# Compute velocity
-		# vel = np.mean(cur_pos - prev_pos, axis=0)
+			# Reshape position to have x, y, and z cols
+			# cur_pos = pos.reshape((6, 3))
+			# Compute velocity
+			# vel = np.mean(cur_pos - prev_pos, axis=0)
 
-		# Update variables for next iteration
-		prev_pos = cur_pos
-	# prev_vel = cur_vel
-	# updated_prev_vel = updated_cur_vel
+			# Update variables for next iteration
+			prev_pos = cur_pos
+		# prev_vel = cur_vel
+		# updated_prev_vel = updated_cur_vel
 
-	# Save position data to output file
-	save_data(updated_positions, 'positions')
-	# Plotting
-	c = itertools.count()  # Generates unique numbers for the figure indices
-	label_m = "Measured Trajectory"
-	label_f = "Updated Trajectory"
-	combined_title = "Combined Plot"
-	plot_trajectory(positions[-200:, :3], label_m + " Partial", next(c))
-	plot_trajectory(updated_positions[-200:, :3], label_f + " Partial", next(c))
+		# Save position data to output file
+		save_data(updated_positions, 'positions')
+		# Plotting
+		c = itertools.count()  # Generates unique numbers for the figure indices
+		label_m = "Measured Trajectory"
+		label_f = "Updated Trajectory"
+		combined_title = "Combined Plot"
+		plot_trajectory(positions[-200:, :3], label_m + " Partial", next(c))
+		plot_trajectory(updated_positions[-200:, :3], label_f + " Partial", next(c))
 
-	plot_trajectory(positions, label_m, next(c))
-	plot_trajectory(updated_positions, label_f, next(c))
-	plot_combined(
-		positions[:, :3], updated_positions[:, :3], label_m, label_f, combined_title, next(c)
-	)
-	print(positions.shape, updated_positions.shape)
+		plot_trajectory(positions, label_m, next(c))
+		plot_trajectory(updated_positions, label_f, next(c))
+		plot_combined(
+			positions[:, :3], updated_positions[:, :3], label_m, label_f, combined_title, next(c)
+		)
+		print(positions.shape, updated_positions.shape)
 
-	print("Positions and trajectory plots saved to output folder.")
+		print("Positions and trajectory plots saved to output folder.")
 
 
 if __name__ == '__main__':
