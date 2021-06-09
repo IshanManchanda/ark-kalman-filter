@@ -5,24 +5,17 @@ class KalmanFilter:
 	def __init__(self, state, process_cov, measurement_cov, a, b, h, q):
 		self.state = state  # Initial State
 
-		# Initial Process Covariance Matrix and Measurement Covariance Matrix
+		# Covariance matrices
 		self.process_cov = process_cov
 		self.measurement_error = measurement_cov
+		self.q = q  # Process Noise Matrix
 
 		# Transform Matrices
 		self.a = a  # State Transition Matrix
 		self.b = b  # Control Matrix
 		self.h = h  # Estimate Error Transform Matrix
-		self.q = q  # Process Noise Matrix
 
-		# print("State", state.shape, state.dtype)
-		# print("Pcov", process_cov.shape)
-		# print("mcov", measurement_cov.shape)
-		# print("a", a.shape)
-		# print("b", b.shape)
-		# print("h", h.shape)
-
-		# Declare additional members
+		# Declare additional member variables
 		self.predicted_state = self.predicted_process_cov = self.gain = None
 
 	def iterate(self, process, measurement):
@@ -40,33 +33,28 @@ class KalmanFilter:
 		# Add process noise
 		self.predicted_process_cov += self.q
 
-		# self.predicted_process_cov += 0.01 * np.eye(18)
-		# self.predicted_process_cov *= 1.2
-		# print("predstate", self.predicted_state.shape)
-		# print("predpcov", self.predicted_process_cov.shape)
-
 	def compute_gain(self):
 		# Compute Kalman Gain using the errors
 		estimate_error = self.predicted_process_cov @ self.h.T
 		total_error = self.h @ estimate_error + self.measurement_error
 		self.gain = estimate_error @ np.linalg.inv(total_error)
-		# print("esterr", estimate_error.shape)
-		# print("terr", total_error.shape)
-		# print("gain", self.gain.shape)
 
 	def update_state(self, measurement):
-		# We use the Joseph Form Update Equation as the simplified equation is
-		# numerically unstable.
-		# Intuition: Floating point errors in the subtraction step could lead to
-		# negative values for variables which should be non-negative,
+		# We use the Joseph Form of the Process Covariance Update Equation
+		# as the simplified version is numerically unstable.
+		# Intuition: Floating point errors in the subtraction step could lead
+		# to negative values for variables which should be non-negative,
 		# which can be deadly for the filter's accuracy.
 		factor = np.eye(self.h.shape[1]) - (self.gain @ self.h)
 		self.process_cov = factor @ self.predicted_process_cov @ factor.T
 		self.process_cov += self.gain @ self.measurement_error @ self.gain.T
 
-		# Testing shows differences of magnitude e-16 (max ~4.5e-16) between the
-		# simplified equation and the Joseph form.
-		# print(self.process_cov - factor @ self.predicted_process_cov)
+		# Testing shows differences of magnitude e-22 (max ~4.2e-22)
+		# between the simplified equation and the Joseph form,
+		# and no losses in accuracy were observed.
+		# However, we continue to use the Joseph form as it generalizes better.
+		# error = self.process_cov - factor @ self.predicted_process_cov
+		# print(np.abs(error))
 
 		# Compute residual and update state
 		residual = measurement - self.h @ self.predicted_state
