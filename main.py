@@ -221,8 +221,10 @@ def main():
 			updated_positions[i + 1] = kalman.state[:, 0].T[:3]
 
 			# The position of the station is simply a running average
+			# of the difference in position of the drone wrt station 1
+			# and wrt the target station
 			station_positions *= i / (i + 1)
-			station_positions += (cur_pos - pos[:3]) / (i + 1)
+			station_positions += (pos[:3] - cur_pos) / (i + 1)
 
 			# Update variables for next iteration
 			prev_pos = cur_pos
