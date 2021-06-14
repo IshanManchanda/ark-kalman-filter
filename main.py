@@ -53,7 +53,7 @@ def plot_trajectory(data, title, index, case_path):
 	ax.scatter3D(data[:, 0], data[:, 1], data[:, 2], c=range(x), cmap='Greens')
 
 	path = os.path.join(case_path, f'{title}.png')
-	figure.savefig(path)
+	figure.savefig(path, bbox_inches='tight')
 
 
 def plot_combined(data1, data2, title, index, case_path):
@@ -77,7 +77,7 @@ def plot_combined(data1, data2, title, index, case_path):
 	)
 
 	path = os.path.join(case_path, f'{title}.png')
-	figure.savefig(path)
+	figure.savefig(path, bbox_inches='tight')
 
 
 def main():
