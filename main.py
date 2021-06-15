@@ -109,7 +109,7 @@ def main():
 	# We use the same position variance as our initial as the source of data
 	# for both is the same.
 	# Further, we're combining the values from 5 stations for the velocity
-	# so the variance is one 5th.
+	# so the variance is 1/5 that of the position.
 	pos_var = initial_pos_var
 	vel_var = pos_var / 5
 	measurement_cov = np.array([
